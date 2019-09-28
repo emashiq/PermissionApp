@@ -1,33 +1,46 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.Options;
-using System;
-using System.Collections.Generic;
+using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using PermissionApp.DbItems;
 using System.Linq;
 using System.Threading.Tasks;
-
-namespace PermissionApp.Providers
+//This authorization will be added as default authintication scheme
+public class AuthorizationHandler : IAuthorizationHandler
 {
-    public class AuthorizationPolicyProvider : DefaultAuthorizationPolicyProvider
+    private readonly IHttpContextAccessor _contextAccessor;
+    private readonly UIControlDatabaseContext _context;
+    public AuthorizationHandler(IHttpContextAccessor contextAccessor)
     {
-        public AuthorizationPolicyProvider(IOptions<AuthorizationOptions> options)
-            : base(options)
+        _contextAccessor = contextAccessor;
+        _context = new UIControlDatabaseContext();
+    }
+    public Task HandleAsync(AuthorizationHandlerContext context)
+    {
+        System.Collections.Generic.List<IAuthorizationRequirement> pendingRequirements = context.PendingRequirements.ToList();
+        HttpContext httpContext = _contextAccessor.HttpContext;
+        PathString path = httpContext.Request.Path;
+        UserModuleUi userModuleUI = _context.UserModuleUi.Include(x => x.ModuleUi).FirstOrDefault(x => x.ModuleUi.Url == path);
+        if (userModuleUI != null)
         {
+            if (userModuleUI.IsOpen || userModuleUI.HasFullAccess)
+            {
+                pendingRequirements.ForEach(x => context.Succeed(x));
+            }
+
+            UserModuleUicontrolsPermissions userControlPermission = _context.UserModuleUicontrolsPermissions.Include(x => x.ModuleUicontrols).FirstOrDefault(c => c.ModuleUicontrols.ControlName == GetControlName(path));
+            if (userControlPermission != null)
+            {
+                if (userControlPermission.IsPermitted == true)
+                {
+                    pendingRequirements.ForEach(x => context.Succeed(x));
+                }
+            }
         }
-
-        public override Task<AuthorizationPolicy> GetPolicyAsync()
-        {
-            //if (!policyName.StartsWith(PermissionAuthorizeAttribute.PolicyPrefix, StringComparison.OrdinalIgnoreCase))
-            //{
-            //    return base.GetPolicyAsync(policyName);
-            //}
-
-            //var permissionNames = policyName.Substring(PermissionAuthorizeAttribute.PolicyPrefix.Length).Split(',');
-
-            var policy = new AuthorizationPolicyBuilder()
-                .RequireClaim("TestClaims", "")
-                .Build();
-
-            return Task.FromResult(policy);
-        }
+        return Task.CompletedTask;
+    }
+    // This algorithm must written based on business demand
+    private string GetControlName(string path)
+    {
+        return path;
     }
 }

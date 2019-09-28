@@ -5,9 +5,9 @@ using System.Threading.Tasks;
 
 namespace PermissionApp.Models
 {
-    public enum PermissionType
+    public enum EPermissionType
     {
-        Viewable,
+        Disabled,
         Hidden
     }
 }

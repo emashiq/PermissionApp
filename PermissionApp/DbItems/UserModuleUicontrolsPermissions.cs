@@ -12,6 +12,7 @@ namespace PermissionApp.DbItems
         public string UserId { get; set; }
         [ForeignKey("ModuleUicontrols")]
         public Guid ControlId { get; set; }
+        public bool IsPermitted { get; set; }
         public int PermissionType { get; set; }
         public bool IsActive { get; set; }
         public bool IsOpen { get; set; }
